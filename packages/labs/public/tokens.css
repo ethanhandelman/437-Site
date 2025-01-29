@@ -1,0 +1,36 @@
+:root {
+    /* Colors */
+    --color-primary: #543f28;
+    --color-background-header: #ffebcd;
+    --color-background-body: #ffdead;
+    --color-accent: #d2691e;
+    --color-link: #0066cc;
+    --color-link-hover: #003366;
+    --color-border: ivory;
+    
+    /* Typography */
+    --font-display: "Bebas Neue", serif;
+    --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* Spacing */
+    --spacing-base: 20px;
+    --spacing-small: 1em;
+    --spacing-medium: 1.5em;
+    --spacing-large: 2em;
+    
+    /* Layout */
+    --gap-nav: 2em;
+    --padding-nav: 1em;
+}
+
+/* High contrast mode overrides */
+@media (prefers-contrast: high) {
+    :root {
+        --color-primary: #000000;
+        --color-background-header: #ffffff;
+        --color-background-body: #ffffff;
+        --color-accent: #000000;
+        --color-link: #0000EE;
+        --color-link-hover: #551A8B;
+    }
+}
