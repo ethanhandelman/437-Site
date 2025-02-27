@@ -1,23 +1,11 @@
-import React from "react";
+import { useState, useEffect } from "react";
 import { Spinner } from "./Spinner";
-
-const MDN_URL = "https://mdn.github.io/learning-area/javascript/apis/fetching-data/can-store/products.json";
-
-/**
- * Creates and returns a new promise that resolves after a specified number of milliseconds.
- *
- * @param {number} ms the number of milliseconds to delay
- * @returns {Promise<undefined>} a promise that resolves with the value of `undefined` after the specified delay
- */
-function delayMs(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+import { groceryFetcher } from "../groceryFetcher";
 
 export function GroceryPanel(props) {
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [error, setError] = React.useState(null);
-
-    const [groceryData, setGroceryData] = React.useState([
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [groceryData, setGroceryData] = useState([
         {
             name: "test item",
             price: 12.3
@@ -28,37 +16,55 @@ export function GroceryPanel(props) {
         }
     ]);
 
-    async function fetchData(url) {
-        console.log("fetching data from " + url);
-        setIsLoading(true);
-        setError(null);
-        
-        await delayMs(2000);
+    // New state variable to store the selected dropdown value
+    const [selectedSource, setSelectedSource] = useState("MDN");
 
-        try {
-            const response = await fetch(url);
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+
+    // useEffect hook that triggers whenever selectedSource changes
+    useEffect(() => {
+        let isStale = false;
+
+        async function fetchData() {
+            setGroceryData([]); // Optionally clear the current data
+            console.log("fetching data from " + selectedSource);
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const response = groceryFetcher.fetch(selectedSource);
+                // Parse the JSON response correctly
+                const data = await response;
+                console.log("Received data:", data);
+                if (!isStale) {
+                    setGroceryData(data);
+                }
+
+            } catch (curError) {
+                if (!isStale) {
+                    console.error(`Could not fetch: ${curError}`);
+                    setError(curError.message);
+                }
+
+            } finally {
+                if (!isStale){
+                    setIsLoading(false);
+                }
             }
-
-            // Parse the JSON response correctly
-            const data = await response.json();
-            console.log("Received data:", data);
-            setGroceryData(data);
-        } catch (curError) {
-            console.error(`Could not fetch: ${curError}`);
-            setError(curError.message);
-        } finally {
-            setIsLoading(false);
         }
-    }
 
+        if (selectedSource !== "" && !isStale) {
+            fetchData(selectedSource);
+        }
+
+        return () => {
+            isStale = true;
+        }
+    }, [selectedSource]);
+
+    // Change handler now updates the selectedSource state
     function handleDropdownChange(changeEvent) {
-        setGroceryData([]);
-        if(changeEvent.target.value != ""){
-            fetchData(changeEvent.target.value);
-        }
+        setSelectedSource(changeEvent.target.value);
     }
 
     function handleAddTodoClicked(item) {
@@ -70,35 +76,37 @@ export function GroceryPanel(props) {
     return (
         <div>
             <h1 className="text-xl font-bold">Groceries prices today</h1>
-            <button onClick={() => fetchData(MDN_URL)}>Fetch</button>
             <label className="mb-4 flex gap-4">
                 Get prices from:
-                <select onChange={handleDropdownChange} disabled={isLoading} className="border border-gray-300 p-1 rounded-sm disabled:opacity-50">
-                    <option value="">(None selected)</option>
-                    <option value={MDN_URL}>MDN</option>
-                    <option value="invalid">Who knows?</option>
+                <select
+                    value={selectedSource}
+                    onChange={handleDropdownChange}
+                    className="border border-gray-300 p-1 rounded-sm disabled:opacity-50"
+                >
+                    <option value="MDN">MDN</option>
+                    <option value="Liquor store">Liquor store</option>
+                    <option value="Butcher">Butcher</option>
+                    <option value="whoknows">Who knows?</option>
                 </select>
-                <LoadIndicator isLoading={isLoading} error={error}></LoadIndicator>
+                <LoadIndicator isLoading={isLoading} error={error} />
             </label>
 
-            {
-                groceryData.length > 0 ?
-                    <PriceTable items={groceryData} onAddClicked={handleAddTodoClicked} /> :
-                    "No data"
-            }
+            {groceryData.length > 0 ? (
+                <PriceTable items={groceryData} onAddClicked={handleAddTodoClicked} />
+            ) : (
+                "No data"
+            )}
         </div>
     );
 }
 
-
 function LoadIndicator(props) {
     if (props.error) {
-        return <p className="text-red-500">{props.error}</p>
+        return <p className="text-red-500">{props.error}</p>;
     }
     if (props.isLoading) {
-        return <Spinner></Spinner>
+        return <Spinner />;
     }
-
     return null;
 }
 
@@ -112,15 +120,13 @@ function PriceTable(props) {
                 </tr>
             </thead>
             <tbody>
-                {
-                    props.items.map(item =>
-                        <PriceTableRow
-                            key={item.name}
-                            item={item}
-                            onAddClicked={() => props.onAddClicked(item)}
-                        />
-                    )
-                }
+                {props.items.map(item => (
+                    <PriceTableRow
+                        key={item.name}
+                        item={item}
+                        onAddClicked={() => props.onAddClicked(item)}
+                    />
+                ))}
             </tbody>
         </table>
     );
